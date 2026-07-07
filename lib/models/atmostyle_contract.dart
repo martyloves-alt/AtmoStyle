@@ -124,8 +124,7 @@ class WeatherSnapshot {
   int get hashCode => Object.hash(temperatureCelsius, condition);
 
   @override
-  String toString() => 'WeatherSnapshot(${temperatureCelsius}°C, ${condition.name})';
-}
+  String toString() => 'WeatherSnapshot($temperatureCelsius°C, ${condition.name})';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Entrée du moteur
