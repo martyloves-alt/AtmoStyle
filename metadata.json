@@ -1,0 +1,6 @@
+{
+  "name": "Météo-Style",
+  "description": "Assistant de stylisme personnel hyperréaliste et proactif propulsé par l'IA.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
