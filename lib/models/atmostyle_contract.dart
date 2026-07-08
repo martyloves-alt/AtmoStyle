@@ -125,6 +125,7 @@ class WeatherSnapshot {
 
   @override
   String toString() => 'WeatherSnapshot($temperatureCelsius°C, ${condition.name})';
+}
 
 // ─────────────────────────────────────────────────────────────────────────
 // Entrée du moteur
