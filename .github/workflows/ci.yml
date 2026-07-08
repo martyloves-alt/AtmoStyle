@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -24,3 +25,6 @@ jobs:
 
       - name: Tests unitaires
         run: flutter test
+
+      - name: Build APK (debug)
+        run: flutter build apk --debug
