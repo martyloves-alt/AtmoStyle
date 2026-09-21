@@ -1,8 +1,8 @@
 // Service de photo de référence — capture/sélection et stockage local.
 //
 // La photo ne quitte le téléphone que lors d'un appel explicite à l'API
-// Gemini (voir gemini_image_service.dart) : elle n'est envoyée à aucun
-// autre serveur, et n'est stockée que localement sur l'appareil.
+// Hugging Face (voir huggingface_image_service.dart) : elle n'est envoyée
+// à aucun autre serveur, et n'est stockée que localement sur l'appareil.
 
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
