@@ -163,7 +163,7 @@ class HuggingFaceImageService {
     // getResponseFromQueueApi : les URL de statut et de résultat sont
     // reconstruites à partir du chemin de `response_url`, qui peut différer
     // du modèle appelé, en repassant par le routeur.
-    final base = '$_routerUrl/$_provider';
+    const base = '$_routerUrl/$_provider';
     final modelPath = Uri.parse(responseUrl).path;
     final statusUrl = Uri.parse('$base$modelPath/status?_subdomain=queue');
     final resultUrl = Uri.parse('$base$modelPath?_subdomain=queue');
