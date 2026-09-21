@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/atmostyle_contract.dart';
-import '../services/gemini_image_service.dart';
+import '../services/huggingface_image_service.dart';
 import '../services/photo_service.dart';
 import 'reglages_screen.dart';
 import 'validation_screen.dart';
@@ -21,7 +21,7 @@ class LookbookScreen extends StatefulWidget {
 
 class _LookbookScreenState extends State<LookbookScreen> {
   final PhotoService _photoService = PhotoService();
-  final GeminiImageService _geminiService = GeminiImageService();
+  final HuggingFaceImageService _imageService = HuggingFaceImageService();
 
   File? _referencePhoto;
   Uint8List? _generatedImage;
@@ -64,7 +64,7 @@ class _LookbookScreenState extends State<LookbookScreen> {
 
     try {
       final bytes = await photo.readAsBytes();
-      final generated = await _geminiService.generateImage(
+      final generated = await _imageService.generateImage(
         prompt: widget.output.imageGenerationPrompt,
         referencePhotoBytes: bytes,
       );
