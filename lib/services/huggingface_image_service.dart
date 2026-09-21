@@ -20,7 +20,7 @@ class HuggingFaceApiException implements Exception {
 
 class HuggingFaceImageService {
   static const String _apiKey = String.fromEnvironment('HF_TOKEN');
-  static const String _model = 'black-forest-labs/FLUX.1-Kontext-dev';
+  static const String _model = 'black-forest-labs/FLUX.2-dev';
   static const String _provider = 'fal-ai';
   static final Uri _endpoint =
       Uri.parse('https://router.huggingface.co/$_provider/$_model');
