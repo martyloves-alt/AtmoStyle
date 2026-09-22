@@ -24,6 +24,18 @@
 //    - packages/inference/src/providers/providerHelper.ts
 //        · makeBaseUrl → `https://router.huggingface.co/<provider>` (l. 109-111)
 //        · makeUrl     → baseUrl + '/' + route (l. 126-132)
+//    - VALIDATION DES RÉPONSES HTTP — la règle est `Response.ok` (vrai pour
+//      tout code 200-299), jamais une égalité à 200 :
+//        · envoi initial  → utils/request.ts l. 58   : `if (!response.ok)`
+//        · statut         → fal-ai.ts     l. 187     : `if (!statusResponse.ok)`
+//        · résultat       → fal-ai.ts     l. 207-213 : aucun contrôle du code,
+//          seul l'échec de parsing JSON lève
+//        · image finale   → fal-ai.ts     l. 363-364 : aucun contrôle du code
+//      La file d'attente de fal répond 202 tant que la génération tourne ;
+//      c'est exactement ce qu'un test `!= 200` prenait pour une erreur.
+//      Divergence assumée : sur le résultat et l'image, ce fichier vérifie
+//      la plage 200-299 alors que le client officiel ne vérifie rien — une
+//      erreur silencieuse vaut moins qu'un message portant le code HTTP.
 //    - packages/inference/src/config.ts → HF_ROUTER_URL (l. 2)
 //    - packages/inference/src/lib/makeRequestOptions.ts → le `model` passé à
 //      makeUrl est `inferenceProviderMapping.providerId`, pas l'identifiant
@@ -81,6 +93,11 @@ class HuggingFaceImageService {
   /// Intervalle d'interrogation de la file d'attente (delay(500) côté client
   /// officiel, getResponseFromQueueApi).
   static const Duration _pollInterval = Duration(milliseconds: 500);
+
+  /// Statuts terminaux d'échec de la file d'attente fal-ai. Le client
+  /// officiel ne les énumère pas (il boucle jusqu'à COMPLETED) : sans cette
+  /// coupure, un échec ne serait vu qu'au bout des 120 s.
+  static const Set<String> _failureStatuses = {'ERROR', 'FAILED', 'CANCELLED'};
 
   /// https://router.huggingface.co/fal-ai/fal-ai/flux-2/edit?_subdomain=queue
   /// Le double segment est correct : base = routeur + fournisseur, route =
@@ -142,7 +159,7 @@ class HuggingFaceImageService {
       }),
     );
 
-    if (submitResponse.statusCode != 200) {
+    if (!_isOk(submitResponse.statusCode)) {
       throw HuggingFaceApiException(
         'Hugging Face a refusé la demande (${submitResponse.statusCode}) : '
         '${_preview(submitResponse.body)}',
@@ -181,7 +198,7 @@ class HuggingFaceImageService {
       await Future<void>.delayed(_pollInterval);
 
       final statusResponse = await http.get(statusUrl, headers: _headers);
-      if (statusResponse.statusCode != 200) {
+      if (!_isOk(statusResponse.statusCode)) {
         throw HuggingFaceApiException(
           'Suivi de la génération impossible (${statusResponse.statusCode}) : '
           '${_preview(statusResponse.body)}',
@@ -191,9 +208,12 @@ class HuggingFaceImageService {
       final decoded = _decodeJson(statusResponse, 'le statut');
       status = decoded['status'];
 
-      // fal-ai renvoie ERROR / FAILED quand la génération échoue : sans ce
-      // garde-fou la boucle tournerait jusqu'au délai global.
-      if (status != 'COMPLETED' && status != 'IN_QUEUE' && status != 'IN_PROGRESS') {
+      // Le client officiel boucle sur tout ce qui n'est pas COMPLETED
+      // (fal-ai.ts l. 183) sans énumérer les statuts intermédiaires : une
+      // liste d'autorisation ferait échouer à tort un statut inconnu mais
+      // valide. On ne coupe donc que sur un échec explicite ; tout le reste
+      // continue d'être interrogé, borné par le délai global.
+      if (_failureStatuses.contains(status)) {
         throw HuggingFaceApiException(
           'Génération échouée côté fal-ai (statut « $status ») : '
           '${_preview(statusResponse.body)}',
@@ -202,7 +222,7 @@ class HuggingFaceImageService {
     }
 
     final resultResponse = await http.get(resultUrl, headers: _headers);
-    if (resultResponse.statusCode != 200) {
+    if (!_isOk(resultResponse.statusCode)) {
       throw HuggingFaceApiException(
         'Récupération du résultat impossible (${resultResponse.statusCode}) : '
         '${_preview(resultResponse.body)}',
@@ -229,7 +249,7 @@ class HuggingFaceImageService {
     }
 
     final imageResponse = await http.get(Uri.parse(imageUrl));
-    if (imageResponse.statusCode != 200) {
+    if (!_isOk(imageResponse.statusCode)) {
       throw HuggingFaceApiException(
         "Téléchargement de l'image généré impossible "
         '(${imageResponse.statusCode}) : ${_preview(imageResponse.body)}',
@@ -281,6 +301,12 @@ class HuggingFaceImageService {
     // PhotoService enregistre du JPEG : repli le plus sûr.
     return 'image/jpeg';
   }
+
+  /// Règle du client officiel : la validation se fait sur `Response.ok`,
+  /// vrai pour tout code 200-299 — pas sur l'égalité à 200. C'est ce qui
+  /// manquait : la file d'attente de fal répond 202 tant que la génération
+  /// est en cours, et un test `!= 200` le prenait pour une erreur.
+  bool _isOk(int statusCode) => statusCode >= 200 && statusCode < 300;
 
   String _preview(String body) =>
       body.substring(0, body.length.clamp(0, 300));
